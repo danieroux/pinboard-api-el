@@ -4,6 +4,7 @@
 ;; Danie Roux <danie@danieroux.com>
 
 ;; Author: Danie Roux <danie@danieroux.com>
+;; URL: https://github.com/danieroux/pinboard-el
 ;; Keywords: pinboard, WWW
 ;; Version: 0.1
 
