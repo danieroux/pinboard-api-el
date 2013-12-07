@@ -1,10 +1,10 @@
-;;; pinboard.el --- Rudimentary http://pinboard.in integration
+;;; pinboard-api.el --- Rudimentary http://pinboard.in integration
 
 ;; Copyright (C) 2013
 ;; Danie Roux <danie@danieroux.com>
 
 ;; Author: Danie Roux <danie@danieroux.com>
-;; URL: https://github.com/danieroux/pinboard-el
+;; URL: https://github.com/danieroux/pinboard-api-el
 ;; Keywords: pinboard, WWW
 ;; Version: 0.1
 
@@ -181,6 +181,6 @@
   (should (equal "&url=http%3A%2F%2Fdanieroux.com" (pinboard-build-add-request "http://danieroux.com")))
   (should-error (pinboard-build-add-request nil)))
 
-(provide 'pinboard)
+(provide 'pinboard-api)
 
-;;; pinboard.el ends here
+;;; pinboard-api.el ends here

@@ -1,4 +1,4 @@
-pinboard-el
+pinboard-api-el
 ===========
 
 pinboard.in integration for Emacs
