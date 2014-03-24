@@ -46,9 +46,11 @@
   "Interactively add the url to pinboard.in with optional details - will cause an error if it could not complete"
   (interactive)
   (let ((a-url (read-from-minibuffer "URL to add to Pinboard? " url))
-	(a-description (read-from-minibuffer "title? " description))
-	(a-tags (pinboard-gather-tags)))
-    (pinboard-api-add a-url a-description a-tags)))
+        (a-description (read-from-minibuffer "title? " description))
+        (a-tags (pinboard-gather-tags))
+        (a-extended (read-from-minibuffer "description? " " ... "))
+        )
+    (pinboard-api-add a-url a-description a-tags a-extended)))
 
 (defun pinboard-refresh-tags-cache ()
   "Refresh list of tags explicitly"
@@ -79,27 +81,27 @@
 
 ;;; API:
 
-(defun pinboard-api-add (url &optional description tags)
+(defun pinboard-api-add (url &optional description tags extended)
   "Add the url to pinboard.in with optional details - will cause an error if it could not complete"
   (url-retrieve
-   (pinboard-auth-request "posts/add" (pinboard-build-add-request url description tags))
+   (pinboard-auth-request "posts/add" (pinboard-build-add-request url description tags extended))
    (lambda (status)
      (let* ((m-error (plist-get status :error))
-	    (full-response (car (pinboard-response (current-buffer))))
-	    ;; (result ((code . "done")))
-	    (response (cdr (assoc 'code (plist-get full-response 'result))))) 
+            (full-response (car (pinboard-response (current-buffer))))
+            ;; (result ((code . "done")))
+            (response (cdr (assoc 'code (plist-get full-response 'result))))) 
        (when m-error
-	 (signal (car m-error) (cadr m-error)))
+         (signal (car m-error) (cadr m-error)))
        (when (not (string-equal "done" response))
-	 (error "pinboard.in - could not complete adding %s because: %s" url response))))))
+         (error "pinboard.in - could not complete adding %s because: %s" url response))))))
 
 (defun pinboard-api-tags-get ()
   "Gets a full list of all user's tags - does not retain the count"
   (let* ((retrieved-buffer
-	  (url-retrieve-synchronously
-	   (pinboard-auth-request "tags/get")))
-	 (parsed-tree
-	  (pinboard-response retrieved-buffer)))
+          (url-retrieve-synchronously
+           (pinboard-auth-request "tags/get")))
+         (parsed-tree
+          (pinboard-response retrieved-buffer)))
     (pinboard-parse-tags parsed-tree)))
 
 ;;; Supporting:
@@ -112,7 +114,7 @@
   "Returns a string of tags - use C-j to break the ido loop"
   (interactive)
   (let* ((tag-list (pinboard--get-tags-from-cache-or-online))
-	 (selected-tags (delete-dups (pinboard--gather-tags tag-list))))
+         (selected-tags (delete-dups (pinboard--gather-tags tag-list))))
     (mapconcat 'identity selected-tags " ")))
 
 (defun pinboard--load-tags-from-cache ()
@@ -135,16 +137,19 @@
   (interactive)
   (let ((tag (pinboard-completing-read "tag? " tag-list)))
     (if (string-set-p tag)
-	(cons tag (pinboard--gather-tags tag-list))
+        (cons tag (pinboard--gather-tags tag-list))
       '())))
 
-(defun pinboard-build-add-request (url &optional description tags)
+(defun pinboard-build-add-request (url &optional description tags extended)
   (when (not (string-set-p url)) (error "For this to be useful, we need a URL"))
   (concat "&url=" (url-hexify-string url)
 	  (when (string-set-p description)
 	    (concat "&description=" (url-hexify-string description)))
 	  (when (string-set-p tags)
-	    (concat "&tags=" (url-hexify-string tags)))))
+	    (concat "&tags=" (url-hexify-string tags)))
+	  (when (string-set-p extended)
+	    (concat "&extended=" (url-hexify-string extended)))
+      ))
 
 (defun pinboard-response (buffer)
   (unwind-protect
@@ -152,7 +157,7 @@
         (save-excursion
           (goto-char url-http-end-of-headers)
           (xml-parse-region (point)
-			    (point-max))))))
+                            (point-max))))))
 
 (defun pinboard-auth-request (call &optional parameters)
   ;; https://pinboard.in/settings/password
@@ -160,10 +165,10 @@
 
 (defun pinboard-parse-tags (xml-parsed-tree)
   (let ((taglist
-	 (cdr (remove-if-not (lambda (x) (listp x))
-			     (car xml-parsed-tree)))))
+         (cdr (remove-if-not (lambda (x) (listp x))
+                             (car xml-parsed-tree)))))
     (loop for (ignore (count-pair tag-pair)) in taglist
-	  collect (cdr tag-pair))))
+          collect (cdr tag-pair))))
 
 (provide 'pinboard-api)
 
