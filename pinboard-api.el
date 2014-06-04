@@ -42,17 +42,20 @@
 
 ;;; Interesting entry points:
 
-(defun pinboard-add-interactively (url &optional description toread shared)
+(defun pinboard-add-interactively (url &optional title description toread shared)
   "Interactively add the url to pinboard.in with optional details - will cause an error if it could not complete"
   (interactive)
   (let ((a-url (read-from-minibuffer "URL to add to Pinboard ? " url))
-        (a-description (read-from-minibuffer "title ? " description))
+        (a-title (read-from-minibuffer "title ? " (if (string-set-p title) title " TITLE ")))
+        (a-description (read-from-minibuffer "description ? " (if (string-set-p title) description " DESCRIPTION ")))
         (a-tags (pinboard-gather-tags))
-        (a-extended (read-from-minibuffer "description ? " " ... "))
-        (a-toread (read-from-minibuffer "to read ? " toread))
-        (a-shared (read-from-minibuffer "shared ? " shared))
-        )
-    (pinboard-api-add a-url a-description a-tags a-extended a-toread a-shared)))
+        (a-toread (if (and (not (string= toread "yes")) (not (string= toread "no")))
+                      (if (y-or-n-p "to read ?") "yes" "no")
+                    toread))
+        (a-shared (if (and (not (string= shared "yes")) (not (string= shared "no")))
+                      (if (y-or-n-p "shared ?") "yes" "no")
+                    shared)))
+    (pinboard-api-add a-url a-title a-tags a-description a-toread a-shared)))
 
 (defun pinboard-refresh-tags-cache ()
   "Refresh list of tags explicitly"
@@ -96,6 +99,21 @@
          (signal (car m-error) (cadr m-error)))
        (when (not (string-equal "done" response))
          (error "pinboard.in - could not complete adding %s because: %s" url response))))))
+
+;; (defun pinboard-api-add (url &optional description tags extended toread shared)
+;;   "Add the url to pinboard.in with optional details - will cause an error if it could not complete"
+;;   ;; (message (pinboard-auth-request "posts/add" (pinboard-build-add-request url description tags extended toread shared) ))
+;;   (url-retrieve
+;;    (pinboard-auth-request "posts/add" (pinboard-build-add-request url description tags extended toread shared))
+;;    (lambda (status)
+;;      (let* ((m-error (plist-get status :error))
+;;             (full-response (car (pinboard-response (current-buffer))))
+;;             ;; (result ((code . "done")))
+;;             (response (cdr (assoc 'code (plist-get full-response 'result)))))
+;;        (when m-error
+;;          (signal (car m-error) (cadr m-error)))
+;;        (when (not (string-equal "done" response))
+;;          (error "pinboard.in - could not complete adding %s because: %s" url response))))))
 
 (defun pinboard-api-tags-get ()
   "Gets a full list of all user's tags - does not retain the count"
