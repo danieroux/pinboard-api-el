@@ -42,15 +42,24 @@
 
 ;;; Interesting entry points:
 
-(defun pinboard-add-interactively (url &optional description tags)
-  "Interactively add the url to pinboard.in with optional details - will cause an error if it could not complete"
+(defun pinboard-add-interactively (url &optional title description toread shared)
+  "Interactively add the URL to pinboard.in with optional details.
+TITLE       - page title
+DESCRIPTION - page description
+TOREAD      - set the read later flag
+SHARED      - set the public / private flag"
   (interactive)
-  (let ((a-url (read-from-minibuffer "URL to add to Pinboard? " url))
-        (a-description (read-from-minibuffer "title? " description))
+  (let ((a-url (read-from-minibuffer "URL to add to Pinboard ? " url))
+        (a-title (read-from-minibuffer "title ? " (if (string-set-p title) title " TITLE ")))
+        (a-description (read-from-minibuffer "description ? " (if (string-set-p title) description " DESCRIPTION ")))
         (a-tags (pinboard-gather-tags))
-        (a-extended (read-from-minibuffer "description? " " ... "))
-        )
-    (pinboard-api-add a-url a-description a-tags a-extended)))
+        (a-toread (if (and (not (string= toread "yes")) (not (string= toread "no")))
+                      (if (y-or-n-p "to read ?") "yes" "no")
+                    toread))
+        (a-shared (if (and (not (string= shared "yes")) (not (string= shared "no")))
+                      (if (y-or-n-p "shared ?") "yes" "no")
+                    shared)))
+    (pinboard-api-add a-url a-title a-tags a-description a-toread a-shared)))
 
 (defun pinboard-refresh-tags-cache ()
   "Refresh list of tags explicitly"
@@ -73,7 +82,7 @@
 (defcustom pinboard-tags-cache-file-name (locate-user-emacs-file "pinboard-tags-cache")
   "Where the pinboard.in cache file for tags is located")
 
-(defcustom pinboard-completing-read-function 
+(defcustom pinboard-completing-read-function
   (if (fboundp 'ido-completing-read) 'ido-completing-read 'completing-read)
   "The function to use for choosing tags"
   :group 'pinboard
@@ -81,19 +90,34 @@
 
 ;;; API:
 
-(defun pinboard-api-add (url &optional description tags extended)
+(defun pinboard-api-add (url &optional description tags extended toread shared)
   "Add the url to pinboard.in with optional details - will cause an error if it could not complete"
   (url-retrieve
-   (pinboard-auth-request "posts/add" (pinboard-build-add-request url description tags extended))
+   (pinboard-auth-request "posts/add" (pinboard-build-add-request url description tags extended toread shared))
    (lambda (status)
      (let* ((m-error (plist-get status :error))
             (full-response (car (pinboard-response (current-buffer))))
             ;; (result ((code . "done")))
-            (response (cdr (assoc 'code (plist-get full-response 'result))))) 
+            (response (cdr (assoc 'code (plist-get full-response 'result)))))
        (when m-error
          (signal (car m-error) (cadr m-error)))
        (when (not (string-equal "done" response))
          (error "pinboard.in - could not complete adding %s because: %s" url response))))))
+
+;; (defun pinboard-api-add (url &optional description tags extended toread shared)
+;;   "Add the url to pinboard.in with optional details - will cause an error if it could not complete"
+;;   ;; (message (pinboard-auth-request "posts/add" (pinboard-build-add-request url description tags extended toread shared) ))
+;;   (url-retrieve
+;;    (pinboard-auth-request "posts/add" (pinboard-build-add-request url description tags extended toread shared))
+;;    (lambda (status)
+;;      (let* ((m-error (plist-get status :error))
+;;             (full-response (car (pinboard-response (current-buffer))))
+;;             ;; (result ((code . "done")))
+;;             (response (cdr (assoc 'code (plist-get full-response 'result)))))
+;;        (when m-error
+;;          (signal (car m-error) (cadr m-error)))
+;;        (when (not (string-equal "done" response))
+;;          (error "pinboard.in - could not complete adding %s because: %s" url response))))))
 
 (defun pinboard-api-tags-get ()
   "Gets a full list of all user's tags - does not retain the count"
@@ -107,7 +131,7 @@
 ;;; Supporting:
 
 (defun pinboard-completing-read (&rest args)
-  "Call the completing-read function defined through the variable pinboard-completing-read-function" 
+  "Call the completing-read function defined through the variable pinboard-completing-read-function"
   (apply pinboard-completing-read-function args))
 
 (defun pinboard-gather-tags ()
@@ -140,15 +164,19 @@
         (cons tag (pinboard--gather-tags tag-list))
       '())))
 
-(defun pinboard-build-add-request (url &optional description tags extended)
+(defun pinboard-build-add-request (url &optional description tags extended toread shared)
   (when (not (string-set-p url)) (error "For this to be useful, we need a URL"))
   (concat "&url=" (url-hexify-string url)
-	  (when (string-set-p description)
-	    (concat "&description=" (url-hexify-string description)))
-	  (when (string-set-p tags)
-	    (concat "&tags=" (url-hexify-string tags)))
-	  (when (string-set-p extended)
-	    (concat "&extended=" (url-hexify-string extended)))
+      (when (string-set-p description)
+        (concat "&description=" (url-hexify-string description)))
+      (when (string-set-p tags)
+        (concat "&tags=" (url-hexify-string tags)))
+      (when (string-set-p extended)
+        (concat "&extended=" (url-hexify-string extended)))
+      (when (string-set-p toread)
+        (concat "&toread=" (url-hexify-string toread)))
+      (when (string-set-p shared)
+        (concat "&shared=" (url-hexify-string shared)))
       ))
 
 (defun pinboard-response (buffer)
