@@ -42,15 +42,15 @@
 
 ;;; Interesting entry points:
 
-(defun pinboard-add-interactively (url &optional description tags toread shared)
+(defun pinboard-add-interactively (url &optional description toread shared)
   "Interactively add the url to pinboard.in with optional details - will cause an error if it could not complete"
   (interactive)
   (let ((a-url (read-from-minibuffer "URL to add to Pinboard ? " url))
         (a-description (read-from-minibuffer "title ? " description))
         (a-tags (pinboard-gather-tags))
         (a-extended (read-from-minibuffer "description ? " " ... "))
-        (a-toread (read-from-minibuffer "to read ? " "yes"))
-        (a-shared (read-from-minibuffer "shared ? " "yes"))
+        (a-toread (read-from-minibuffer "to read ? " toread))
+        (a-shared (read-from-minibuffer "shared ? " shared))
         )
     (pinboard-api-add a-url a-description a-tags a-extended a-toread a-shared)))
 
