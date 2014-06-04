@@ -43,7 +43,11 @@
 ;;; Interesting entry points:
 
 (defun pinboard-add-interactively (url &optional title description toread shared)
-  "Interactively add the url to pinboard.in with optional details - will cause an error if it could not complete"
+  "Interactively add the URL to pinboard.in with optional details.
+TITLE       - page title
+DESCRIPTION - page description
+TOREAD      - set the read later flag
+SHARED      - set the public / private flag"
   (interactive)
   (let ((a-url (read-from-minibuffer "URL to add to Pinboard ? " url))
         (a-title (read-from-minibuffer "title ? " (if (string-set-p title) title " TITLE ")))
